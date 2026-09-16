@@ -53,12 +53,14 @@
 
         .container {
             padding: 2rem;
-            overflow-x: auto; /* Enables smooth horizontal scrolling */
+            overflow-x: auto;
         }
 
+        /* Centered Header Section with Add Button */
         .board-title {
             text-align: center;
             margin-bottom: 2.5rem;
+            position: relative;
         }
 
         .board-title h2 {
@@ -75,12 +77,29 @@
             font-weight: 600;
         }
 
-        /* Kanban Layout */
+        .btn-add-task {
+            margin-top: 1rem;
+            background-color: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-add-task:hover {
+            background-color: #6e2124;
+        }
+
+        /* Kanban Horizontal Scroll Grid */
         .board-grid {
-            display: flex; /* Swaps from grid to flex row */
+            display: flex;
             gap: 1.5rem;
             align-items: flex-start;
-            min-width: max-content; /* Prevents columns from shrinking or dropping down */
+            min-width: max-content;
         }
 
         .column {
@@ -88,7 +107,7 @@
             border-radius: 12px;
             padding: 1.25rem;
             border: 1px solid var(--border-color);
-            width: 300px; /* Gives every column a fixed, clean width */
+            width: 300px;
             flex-shrink: 0;
         }
 
@@ -125,6 +144,15 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
             border-left: 4px solid var(--primary-red);
             transition: opacity 0.2s ease;
+        }
+
+        .is-completed {
+            opacity: 0.6;
+        }
+
+        .completed-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
         }
 
         .category-tag {
@@ -172,11 +200,6 @@
         .status-in-progress { color: #2563EB; }
         .status-completed { color: #059669; }
 
-        .is-completed {opacity: 0.6;}
-
-        .completed-text { text-decoration: line-through; color: var(--text-muted);}
-
-        /* Nested Subtasks & Notes */
         .nested-section {
             margin-top: 0.8rem;
             font-size: 0.8rem;
@@ -198,8 +221,92 @@
             padding-left: 0.2rem;
         }
 
-        li {
-            margin-bottom: 0.2rem;
+        /* Modal Popup Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: var(--card-white);
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            border: 2px solid var(--primary-red);
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 2rem 0;
+        }
+
+        .modal-header {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: var(--primary-red);
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-cancel {
+            background: #CCC;
+            color: #333;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .item-list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-cream);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+
+        .btn-inline-del {
+            background: none;
+            border: none;
+            color: var(--primary-red);
+            cursor: pointer;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -218,6 +325,7 @@
         <div class="board-title">
             <h2>Task Board</h2>
             <div class="kanji-title">作業掲示板</div>
+            <button class="btn-add-task" onclick="openModal('taskModal')">+ Add New Task (新規タスク)</button>
         </div>
 
         <div class="board-grid">
@@ -233,14 +341,32 @@
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                 <span class="category-tag">{{ task.category.name }}</span>
                                 
-                                <!-- Main Task Checkbox Form -->
-                                <form method="POST" style="display: inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="task_id" value="{{ task.id }}">
-                                    <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.1rem;" title="Toggle Complete Task">
-                                        {% if task.status == 'Completed' %}☑️{% else %}🟩{% endif %}
+                                <div>
+                                    <!-- Toggle Task Complete -->
+                                    <form method="POST" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="toggle_task">
+                                        <input type="hidden" name="task_id" value="{{ task.id }}">
+                                        <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1rem;" title="Toggle Status">
+                                            {% if task.status == 'Completed' %}☑️{% else %}🟩{% endif %}
+                                        </button>
+                                    </form>
+
+                                    <!-- Edit Task Button -->
+                                    <button type="button" onclick="openModal('editModal-{{ task.id }}')" style="background: none; border: none; cursor: pointer; font-size: 1rem;" title="Edit Task">
+                                        ✏️
                                     </button>
-                                </form>
+
+                                    <!-- Delete Task -->
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this task?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_task">
+                                        <input type="hidden" name="task_id" value="{{ task.id }}">
+                                        <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1rem;" title="Delete Task">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
 
                             <div class="task-title {% if task.status == 'Completed' %}completed-text{% endif %}">
@@ -250,19 +376,18 @@
 
                             {% if task.subtasks.all %}
                                 <div class="nested-section">
-                                    <div class="nested-title">Subtasks (Check to complete)</div>
+                                    <div class="nested-title">Subtasks</div>
                                     <ul>
                                         {% for subtask in task.subtasks.all %}
                                             <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                                 <span class="{% if subtask.status == 'Completed' %}completed-text{% endif %}">
                                                     • {{ subtask.title }}
                                                 </span>
-                                                
-                                                <!-- Subtask Checkbox Form -->
                                                 <form method="POST" style="display: inline;">
                                                     {% csrf_token %}
+                                                    <input type="hidden" name="action" value="toggle_subtask">
                                                     <input type="hidden" name="subtask_id" value="{{ subtask.id }}">
-                                                    <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 0.85rem;" title="Toggle Subtask">
+                                                    <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 0.85rem;">
                                                         {% if subtask.status == 'Completed' %}☑️{% else %}☐{% endif %}
                                                     </button>
                                                 </form>
@@ -288,6 +413,83 @@
                                 <span class="status-pill status-{{ task.status|slugify }}">{{ task.status }}</span>
                             </div>
                         </div>
+
+                        <!-- Edit Task Modal for this specific task -->
+                        <div id="editModal-{{ task.id }}" class="modal">
+                            <div class="modal-content">
+                                <div class="modal-header">Edit Task</div>
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="edit_task">
+                                    <input type="hidden" name="task_id" value="{{ task.id }}">
+
+                                    <div class="form-group">
+                                        <label>Task Title</label>
+                                        <input type="text" name="title" value="{{ task.title }}" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <textarea name="description" rows="3">{{ task.description }}</textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Deadline (Current: {{ task.deadline|date:"Y-m-d H:i" }})</label>
+                                        <input type="datetime-local" name="deadline" value="{{ task.deadline|date:'Y-m-d\TH:i' }}">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Priority</label>
+                                        <select name="priority">
+                                            {% for p in priorities %}
+                                                <option value="{{ p.id }}" {% if p.id == task.priority.id %}selected{% endif %}>{{ p.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Category</label>
+                                        <select name="category">
+                                            {% for c in categories %}
+                                                <option value="{{ c.id }}" {% if c.id == task.category.id %}selected{% endif %}>{{ c.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <!-- Subtask Section inside Edit Modal -->
+                                    <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+                                        <label style="color: var(--primary-red);">Subtasks</label>
+                                        {% for st in task.subtasks.all %}
+                                            <div class="item-list-row">
+                                                <span>• {{ st.title }}</span>
+                                                <button type="submit" name="action" value="delete_subtask" onclick="this.form.subtask_id_del.value='{{ st.id }}'" class="btn-inline-del" title="Delete Subtask">✕</button>
+                                            </div>
+                                        {% endfor %}
+                                        <input type="hidden" name="subtask_id" id="subtask_id_del" value="">
+                                        <input type="text" name="new_subtask_title" placeholder="+ Add a new subtask..." style="margin-top: 0.5rem;">
+                                    </div>
+
+                                    <!-- Notes Section inside Edit Modal -->
+                                    <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+                                        <label style="color: var(--primary-red);">Notes</label>
+                                        {% for note in task.notes.all %}
+                                            <div class="item-list-row">
+                                                <span>💬 {{ note.content }}</span>
+                                                <button type="submit" name="action" value="delete_note" onclick="this.form.note_id_del.value='{{ note.id }}'" class="btn-inline-del" title="Delete Note">✕</button>
+                                            </div>
+                                        {% endfor %}
+                                        <input type="hidden" name="note_id" id="note_id_del" value="">
+                                        <input type="text" name="new_note_content" placeholder="+ Add a new note..." style="margin-top: 0.5rem;">
+                                    </div>
+
+                                    <div class="modal-actions">
+                                        <button type="button" class="btn-cancel" onclick="closeModal('editModal-{{ task.id }}')">Cancel</button>
+                                        <button type="submit" class="btn-add-task" style="margin-top:0;">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                     {% empty %}
                         <p style="font-size: 0.85rem; color: var(--text-muted);">No tasks assigned.</p>
                     {% endfor %}
@@ -295,6 +497,64 @@
             {% endfor %}
         </div>
     </div>
+
+    <!-- Create Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Create New Task</div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_task">
+
+                <div class="form-group">
+                    <label>Task Title</label>
+                    <input type="text" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Deadline</label>
+                    <input type="datetime-local" name="deadline" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select name="priority" required>
+                        {% for priority in priorities %}
+                            <option value="{{ priority.id }}">{{ priority.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category" required>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal('taskModal')">Cancel</button>
+                    <button type="submit" class="btn-add-task" style="margin-top:0;">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+    </script>
 
 </body>
 </html>
