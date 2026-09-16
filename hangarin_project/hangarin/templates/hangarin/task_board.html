@@ -53,24 +53,34 @@
 
         .container {
             padding: 2rem;
+            overflow-x: auto; /* Enables smooth horizontal scrolling */
         }
 
         .board-title {
-            margin-bottom: 2rem;
+            text-align: center;
+            margin-bottom: 2.5rem;
         }
 
         .board-title h2 {
             font-family: 'Playfair Display', serif;
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             color: var(--accent-dark);
+            margin-bottom: 0.2rem;
+        }
+
+        .board-title .kanji-title {
+            font-size: 0.95rem;
+            color: var(--primary-red);
+            letter-spacing: 2px;
+            font-weight: 600;
         }
 
         /* Kanban Layout */
         .board-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            display: flex; /* Swaps from grid to flex row */
             gap: 1.5rem;
-            align-items: start;
+            align-items: flex-start;
+            min-width: max-content; /* Prevents columns from shrinking or dropping down */
         }
 
         .column {
@@ -78,6 +88,8 @@
             border-radius: 12px;
             padding: 1.25rem;
             border: 1px solid var(--border-color);
+            width: 300px; /* Gives every column a fixed, clean width */
+            flex-shrink: 0;
         }
 
         .column-header {
@@ -205,6 +217,7 @@
     <div class="container">
         <div class="board-title">
             <h2>Task Board</h2>
+            <div class="kanji-title">作業掲示板</div>
         </div>
 
         <div class="board-grid">
