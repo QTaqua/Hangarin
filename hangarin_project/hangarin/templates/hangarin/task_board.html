@@ -422,6 +422,8 @@
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="edit_task">
                                     <input type="hidden" name="task_id" value="{{ task.id }}">
+                                    <input type="hidden" name="subtask_id" id="subtask_id_del_{{ task.id }}" value="">
+                                    <input type="hidden" name="note_id" id="note_id_del_{{ task.id }}" value="">
 
                                     <div class="form-group">
                                         <label>Task Title</label>
@@ -456,30 +458,38 @@
                                         </select>
                                     </div>
 
-                                    <!-- Subtask Section inside Edit Modal -->
+                                    <!-- Subtask Section (AJAX Enabled) -->
                                     <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
                                         <label style="color: var(--primary-red);">Subtasks</label>
-                                        {% for st in task.subtasks.all %}
-                                            <div class="item-list-row">
-                                                <span>• {{ st.title }}</span>
-                                                <button type="button" onclick="this.form.action.value='delete_subtask'; this.form.subtask_id_del.value='{{ st.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
-                                            </div>
-                                        {% endfor %}
-                                        <input type="hidden" name="subtask_id" id="subtask_id_del" value="">
-                                        <input type="text" name="new_subtask_title" placeholder="+ Add a new subtask..." style="margin-top: 0.5rem;">
+                                        <div id="subtask-list-{{ task.id }}">
+                                            {% for st in task.subtasks.all %}
+                                                <div class="item-list-row">
+                                                    <span>• {{ st.title }}</span>
+                                                    <button type="button" onclick="this.form.action.value='delete_subtask'; this.form.subtask_id.value='{{ st.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                            <input type="text" id="new-subtask-input-{{ task.id }}" class="js-subtask-input" data-task-id="{{ task.id }}" placeholder="+ Add a new subtask...">
+                                            <button type="button" class="btn-add-task js-subtask-btn" data-task-id="{{ task.id }}" style="margin-top:0; padding: 0.4rem 0.8rem;">+ Add</button>
+                                        </div>
                                     </div>
 
-                                    <!-- Notes Section inside Edit Modal -->
+                                    <!-- Notes Section (AJAX Enabled) -->
                                     <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
                                         <label style="color: var(--primary-red);">Notes</label>
-                                        {% for note in task.notes.all %}
-                                            <div class="item-list-row">
-                                                <span>💬 {{ note.content }}</span>
-                                                <button type="button" onclick="this.form.action.value='delete_note'; this.form.note_id_del.value='{{ note.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
-                                            </div>
-                                        {% endfor %}
-                                        <input type="hidden" name="note_id" id="note_id_del" value="">
-                                        <input type="text" name="new_note_content" placeholder="+ Add a new note..." style="margin-top: 0.5rem;">
+                                        <div id="note-list-{{ task.id }}">
+                                            {% for note in task.notes.all %}
+                                                <div class="item-list-row">
+                                                    <span>💬 {{ note.content }}</span>
+                                                    <button type="button" onclick="this.form.action.value='delete_note'; this.form.note_id.value='{{ note.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                            <input type="text" id="new-note-input-{{ task.id }}" class="js-note-input" data-task-id="{{ task.id }}" placeholder="+ Add a new note...">
+                                            <button type="button" class="btn-add-task js-note-btn" data-task-id="{{ task.id }}" style="margin-top:0; padding: 0.4rem 0.8rem;">+ Add</button>
+                                        </div>
                                     </div>
 
                                     <div class="modal-actions">
@@ -551,9 +561,112 @@
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
         }
+        
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
         }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function addSubtaskAjax(taskId) {
+            const input = document.getElementById(`new-subtask-input-${taskId}`);
+            const title = input.value.trim();
+            if (!title) return;
+
+            const formData = new FormData();
+            formData.append('action', 'ajax_add_subtask');
+            formData.append('task_id', taskId);
+            formData.append('title', title);
+
+            fetch('', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const listContainer = document.getElementById(`subtask-list-${taskId}`);
+                    const newRow = document.createElement('div');
+                    newRow.className = 'item-list-row';
+                    newRow.innerHTML = `
+                        <span>• ${data.title}</span>
+                        <button type="button" onclick="this.form.action.value='delete_subtask'; this.form.subtask_id.value='${data.id}'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
+                    `;
+                    listContainer.appendChild(newRow);
+                    input.value = '';
+                }
+            });
+        }
+
+        function addNoteAjax(taskId) {
+            const input = document.getElementById(`new-note-input-${taskId}`);
+            const content = input.value.trim();
+            if (!content) return;
+
+            const formData = new FormData();
+            formData.append('action', 'ajax_add_note');
+            formData.append('task_id', taskId);
+            formData.append('content', content);
+
+            fetch('', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const listContainer = document.getElementById(`note-list-${taskId}`);
+                    const newRow = document.createElement('div');
+                    newRow.className = 'item-list-row';
+                    newRow.innerHTML = `
+                        <span>💬 ${data.content}</span>
+                        <button type="button" onclick="this.form.action.value='delete_note'; this.form.note_id.value='${data.id}'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
+                    `;
+                    listContainer.appendChild(newRow);
+                    input.value = '';
+                }
+            });
+        }
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('js-subtask-btn')) {
+                const taskId = e.target.getAttribute('data-task-id');
+                addSubtaskAjax(taskId);
+            }
+            if (e.target.classList.contains('js-note-btn')) {
+                const taskId = e.target.getAttribute('data-task-id');
+                addNoteAjax(taskId);
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                if (e.target.classList.contains('js-subtask-input')) {
+                    e.preventDefault();
+                    const taskId = e.target.getAttribute('data-task-id');
+                    addSubtaskAjax(taskId);
+                }
+                if (e.target.classList.contains('js-note-input')) {
+                    e.preventDefault();
+                    const taskId = e.target.getAttribute('data-task-id');
+                    addNoteAjax(taskId);
+                }
+            }
+        });
     </script>
 
 </body>

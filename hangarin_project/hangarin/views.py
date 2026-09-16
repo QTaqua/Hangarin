@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from .models import Category, Note, Priority, SubTask, Task
 
@@ -6,7 +7,46 @@ def task_board(request):
     if request.method == "POST":
         action = request.POST.get("action")
 
-        if action == "create_task":
+        # AJAX Handling: Fast Subtask Creation
+        if action == "ajax_add_subtask":
+            task_id = request.POST.get("task_id")
+            title = request.POST.get("title", "").strip()
+            if task_id and title:
+                task = get_object_or_404(Task, id=task_id)
+                subtask = SubTask.objects.create(
+                    parent_task=task, title=title, status="Pending"
+                )
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "id": subtask.id,
+                        "title": subtask.title,
+                    }
+                )
+            return JsonResponse(
+                {"status": "error", "message": "Invalid data"}, status=400
+            )
+
+        # AJAX Handling: Fast Note Creation
+        elif action == "ajax_add_note":
+            task_id = request.POST.get("task_id")
+            content = request.POST.get("content", "").strip()
+            if task_id and content:
+                task = get_object_or_404(Task, id=task_id)
+                note = Note.objects.create(task=task, content=content)
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "id": note.id,
+                        "content": note.content,
+                    }
+                )
+            return JsonResponse(
+                {"status": "error", "message": "Invalid data"}, status=400
+            )
+
+        # Standard POST actions (Create Task, Toggle, Delete)
+        elif action == "create_task":
             title = request.POST.get("title")
             description = request.POST.get("description")
             deadline = request.POST.get("deadline")
@@ -40,23 +80,6 @@ def task_board(request):
                 if category_id:
                     task.category = get_object_or_404(Category, id=category_id)
                 task.save()
-
-                # Add new Subtask if provided
-                new_subtask_title = request.POST.get("new_subtask_title")
-                if new_subtask_title and new_subtask_title.strip():
-                    SubTask.objects.create(
-                        parent_task=task,
-                        title=new_subtask_title.strip(),
-                        status="Pending",
-                    )
-
-                # Add new Note if provided
-                new_note_content = request.POST.get("new_note_content")
-                if new_note_content and new_note_content.strip():
-                    Note.objects.create(
-                        task=task,
-                        content=new_note_content.strip(),
-                    )
 
         elif action == "delete_subtask":
             subtask_id = request.POST.get("subtask_id")
