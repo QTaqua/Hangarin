@@ -462,7 +462,7 @@
                                         {% for st in task.subtasks.all %}
                                             <div class="item-list-row">
                                                 <span>• {{ st.title }}</span>
-                                                <button type="submit" name="action" value="delete_subtask" onclick="this.form.subtask_id_del.value='{{ st.id }}'" class="btn-inline-del" title="Delete Subtask">✕</button>
+                                                <button type="button" onclick="this.form.action.value='delete_subtask'; this.form.subtask_id_del.value='{{ st.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
                                             </div>
                                         {% endfor %}
                                         <input type="hidden" name="subtask_id" id="subtask_id_del" value="">
@@ -475,7 +475,7 @@
                                         {% for note in task.notes.all %}
                                             <div class="item-list-row">
                                                 <span>💬 {{ note.content }}</span>
-                                                <button type="submit" name="action" value="delete_note" onclick="this.form.note_id_del.value='{{ note.id }}'" class="btn-inline-del" title="Delete Note">✕</button>
+                                                <button type="button" onclick="this.form.action.value='delete_note'; this.form.note_id_del.value='{{ note.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
                                             </div>
                                         {% endfor %}
                                         <input type="hidden" name="note_id" id="note_id_del" value="">
