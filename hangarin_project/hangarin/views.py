@@ -1,134 +1,130 @@
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from .models import Category, Note, Priority, SubTask, Task
+from django.db import models
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+from .models import Task, Priority, Category, SubTask, Note
 
 
+# --- Signup / Registration View ---
+def register(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)  # Automatically log user in after registration
+            return redirect('task_board')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+
+# --- Main Task Board View (Protected) ---
+@login_required
 def task_board(request):
     if request.method == "POST":
-        action = request.POST.get("action")
+        action = request.POST.get('action')
 
-        # AJAX Handling: Fast Subtask Creation
-        if action == "ajax_add_subtask":
-            task_id = request.POST.get("task_id")
-            title = request.POST.get("title", "").strip()
-            if task_id and title:
-                task = get_object_or_404(Task, id=task_id)
-                subtask = SubTask.objects.create(
-                    parent_task=task, title=title, status="Pending"
-                )
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "id": subtask.id,
-                        "title": subtask.title,
-                    }
-                )
-            return JsonResponse(
-                {"status": "error", "message": "Invalid data"}, status=400
-            )
+        # AJAX: Add Subtask
+        if action == 'ajax_add_subtask':
+            task_id = request.POST.get('task_id')
+            title = request.POST.get('title', '').strip()
+            task = get_object_or_404(Task, id=task_id, user=request.user)
+            subtask = SubTask.objects.create(parent_task=task, title=title, status='Pending')
+            return JsonResponse({'status': 'success', 'id': subtask.id, 'title': subtask.title})
 
-        # AJAX Handling: Fast Note Creation
-        elif action == "ajax_add_note":
-            task_id = request.POST.get("task_id")
-            content = request.POST.get("content", "").strip()
-            if task_id and content:
-                task = get_object_or_404(Task, id=task_id)
-                note = Note.objects.create(task=task, content=content)
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "id": note.id,
-                        "content": note.content,
-                    }
-                )
-            return JsonResponse(
-                {"status": "error", "message": "Invalid data"}, status=400
-            )
+        # AJAX: Add Note
+        elif action == 'ajax_add_note':
+            task_id = request.POST.get('task_id')
+            content = request.POST.get('content', '').strip()
+            task = get_object_or_404(Task, id=task_id, user=request.user)
+            note = Note.objects.create(task=task, content=content)
+            return JsonResponse({'status': 'success', 'id': note.id, 'content': note.content})
 
-        # Standard POST actions (Create Task, Toggle, Delete)
-        elif action == "create_task":
-            title = request.POST.get("title")
-            description = request.POST.get("description")
-            deadline = request.POST.get("deadline")
-            priority_id = request.POST.get("priority")
-            category_id = request.POST.get("category")
+        # Form Submit: Create Task
+        elif action == 'create_task':
+            title = request.POST.get('title')
+            description = request.POST.get('description')
+            deadline = request.POST.get('deadline')
+            priority_id = request.POST.get('priority')
+            category_id = request.POST.get('category')
 
             if title and priority_id and category_id and deadline:
                 priority = get_object_or_404(Priority, id=priority_id)
                 category = get_object_or_404(Category, id=category_id)
                 Task.objects.create(
+                    user=request.user,  # Attach current logged in user
                     title=title,
                     description=description,
                     deadline=deadline,
                     priority=priority,
-                    category=category,
+                    category=category
                 )
 
-        elif action == "edit_task":
-            task_id = request.POST.get("task_id")
-            if task_id:
-                task = get_object_or_404(Task, id=task_id)
-                task.title = request.POST.get("title", task.title)
-                task.description = request.POST.get("description", task.description)
-                deadline = request.POST.get("deadline")
-                if deadline:
-                    task.deadline = deadline
-                priority_id = request.POST.get("priority")
-                if priority_id:
-                    task.priority = get_object_or_404(Priority, id=priority_id)
-                category_id = request.POST.get("category")
-                if category_id:
-                    task.category = get_object_or_404(Category, id=category_id)
+        # Form Submit: Edit Task
+        elif action == 'edit_task':
+            task_id = request.POST.get('task_id')
+            task = get_object_or_404(Task, id=task_id, user=request.user)
+            task.title = request.POST.get('title', task.title)
+            task.description = request.POST.get('description', task.description)
+            if request.POST.get('deadline'):
+                task.deadline = request.POST.get('deadline')
+            if request.POST.get('priority'):
+                task.priority = get_object_or_404(Priority, id=request.POST.get('priority'))
+            if request.POST.get('category'):
+                task.category = get_object_or_404(Category, id=request.POST.get('category'))
+            task.save()
+
+        # Form Submit: Delete Task
+        elif action == 'delete_task':
+            task_id = request.POST.get('task_id')
+            task = get_object_or_404(Task, id=task_id, user=request.user)
+            task.delete()
+
+        # Form Submit: Toggle Task Status
+        elif action == 'toggle_task':
+            task_id = request.POST.get('task_id')
+            task = get_object_or_404(Task, id=task_id, user=request.user)
+            if task.status != 'Completed':
+                task.status = 'Completed'
+                task.save()
+                task.subtasks.update(status='Completed')
+            else:
+                task.status = 'Pending'
                 task.save()
 
-        elif action == "delete_subtask":
-            subtask_id = request.POST.get("subtask_id")
-            if subtask_id:
-                subtask = get_object_or_404(SubTask, id=subtask_id)
-                subtask.delete()
+        # Form Submit: Toggle Subtask Status
+        elif action == 'toggle_subtask':
+            subtask_id = request.POST.get('subtask_id')
+            subtask = get_object_or_404(SubTask, id=subtask_id, parent_task__user=request.user)
+            subtask.status = 'Pending' if subtask.status == 'Completed' else 'Completed'
+            subtask.save()
 
-        elif action == "delete_note":
-            note_id = request.POST.get("note_id")
-            if note_id:
-                note = get_object_or_404(Note, id=note_id)
-                note.delete()
+        # Form Submit: Delete Subtask
+        elif action == 'delete_subtask':
+            subtask_id = request.POST.get('subtask_id_del')
+            subtask = get_object_or_404(SubTask, id=subtask_id, parent_task__user=request.user)
+            subtask.delete()
 
-        elif action == "delete_task":
-            task_id = request.POST.get("task_id")
-            if task_id:
-                task = get_object_or_404(Task, id=task_id)
-                task.delete()
+        # Form Submit: Delete Note
+        elif action == 'delete_note':
+            note_id = request.POST.get('note_id_del')
+            note = get_object_or_404(Note, id=note_id, task__user=request.user)
+            note.delete()
 
-        elif action == "toggle_task":
-            task_id = request.POST.get("task_id")
-            if task_id:
-                task = get_object_or_404(Task, id=task_id)
-                if task.status != "Completed":
-                    task.status = "Completed"
-                    task.save()
-                    task.subtasks.update(status="Completed")
-                else:
-                    task.status = "Pending"
-                    task.save()
+        return redirect('task_board')
 
-        elif action == "toggle_subtask":
-            subtask_id = request.POST.get("subtask_id")
-            if subtask_id:
-                subtask = get_object_or_404(SubTask, id=subtask_id)
-                subtask.status = (
-                    "Completed" if subtask.status != "Completed" else "Pending"
-                )
-                subtask.save()
-
-        return redirect("task_board")
-
+    # Fetch priorities and only include tasks belonging to the current user
     priorities = Priority.objects.prefetch_related(
-        "tasks__subtasks", "tasks__notes", "tasks__category"
+        models.Prefetch(
+            'tasks',
+            queryset=Task.objects.filter(user=request.user).prefetch_related('subtasks', 'notes', 'category')
+        )
     ).all()
     categories = Category.objects.all()
 
-    return render(
-        request,
-        "hangarin/task_board.html",
-        {"priorities": priorities, "categories": categories},
-    )
+    return render(request, 'hangarin/task_board.html', {
+        'priorities': priorities,
+        'categories': categories
+    })

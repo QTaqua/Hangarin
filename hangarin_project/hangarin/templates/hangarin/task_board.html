@@ -312,12 +312,16 @@
 </head>
 <body>
 
-    <header>
+    <header style="display: flex; justify-content: space-between; align-items: center;">
         <div>
             <h1>HANGARIN <span class="kanji-sub">タスク管理</span></h1>
         </div>
-        <div>
-            <a href="/admin/" style="color: white; text-decoration: none; font-size: 0.9rem; font-weight: 500;">Admin Panel ⚙️</a>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <span style="font-size: 0.9rem;">👤 {{ user.username }}</span>
+            <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" style="background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer;">Logout</button>
+            </form>
         </div>
     </header>
 

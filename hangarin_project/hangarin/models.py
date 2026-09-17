@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -32,34 +33,26 @@ class Category(BaseModel):
         return self.name
 
 
-class Task(BaseModel):
-    STATUS_CHOICES = [
-        ("Pending", "Pending"),
-        ("In Progress", "In Progress"),
-        ("Completed", "Completed"),
-    ]
-
-    title = models.CharField(max_length=255)
-    description = models.TextField()
+class Task(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="tasks"
+    )
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
     deadline = models.DateTimeField()
     status = models.CharField(
-        max_length=50,
-        choices=STATUS_CHOICES,
-        default="Pending",
+        max_length=20, default="Pending"
+    )  # Pending, Completed
+    priority = models.ForeignKey(
+        Priority, on_delete=models.CASCADE, related_name="tasks"
     )
     category = models.ForeignKey(
-        Category,
-        on_delete=models.CASCADE,
-        related_name="tasks",
+        Category, on_delete=models.CASCADE, related_name="tasks"
     )
-    priority = models.ForeignKey(
-        Priority,
-        on_delete=models.CASCADE,
-        related_name="tasks",
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.user.username})"
 
 
 class Note(BaseModel):
