@@ -1,0 +1,170 @@
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン — Hangarin</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-red: #e63946;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --border-color: #333333;
+            --input-bg: #2b2b2b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 6px;
+            width: 100%;
+            max-width: 380px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .brand-header h1 {
+            font-family: 'Times New Roman', Georgia, serif;
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            margin: 0;
+            color: var(--accent-red);
+            font-weight: 700;
+        }
+
+        .kanji-sub {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--accent-red);
+            margin-top: 4px;
+            letter-spacing: 3px;
+        }
+
+        form p {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"], input[type="password"], input[type="email"] {
+            width: 100%;
+            padding: 0.6rem;
+            box-sizing: border-box;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent-red);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.7rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            display: block;
+            box-sizing: border-box;
+            text-decoration: none;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: var(--accent-red);
+            color: #ffffff;
+        }
+
+        .btn-social {
+            margin-top: 0.5rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            transition: background 0.2s;
+        }
+
+        .btn-social:hover {
+            background: #2a2a2a;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: 0.8rem;
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .auth-footer a {
+            color: var(--text-main);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="brand-header">
+            <h1>HANGARIN</h1>
+            <span class="kanji-sub">ログイン</span>
+        </div>
+
+        <form method="post" action="{% url 'account_login' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">LOG IN</button>
+        </form>
+
+        <div class="divider">/ / OR / /</div>
+
+        <a href="{% provider_login_url 'github' %}" class="btn btn-social">GitHub</a>
+        <a href="{% provider_login_url 'google' %}" class="btn btn-social">Google</a>
+
+        <div class="auth-footer">
+            Need an account? <a href="{% url 'account_signup' %}">Register</a>
+        </div>
+    </div>
+</body>
+</html>

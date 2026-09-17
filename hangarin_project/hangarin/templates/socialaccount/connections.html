@@ -1,0 +1,192 @@
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>連携設定 — Hangarin</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-red: #e63946;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --border-color: #333333;
+            --input-bg: #2b2b2b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 6px;
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .brand-header h1 {
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .kanji-sub {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--accent-red);
+            margin-top: 4px;
+            letter-spacing: 3px;
+        }
+
+        .account-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .account-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .provider-name {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .btn-remove {
+            background: transparent;
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .btn-remove:hover {
+            background: var(--accent-red);
+            color: #ffffff;
+        }
+
+        .connect-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-social {
+            flex: 1;
+            padding: 0.6rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 4px;
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-social:hover {
+            background: #2a2a2a;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+        }
+
+        .auth-footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .auth-footer a:hover {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="brand-header">
+            <h1>LINKED ACCOUNTS</h1>
+            <span class="kanji-sub">アカウント連携</span>
+        </div>
+
+        {% if form.accounts %}
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">Connected Accounts</p>
+            <form method="post" action="{% url 'socialaccount_connections' %}">
+                {% csrf_token %}
+                <ul class="account-list">
+                    {% for base_account in form.accounts %}
+                        {% with account=base_account.get_provider_account %}
+                            <li class="account-item">
+                                <span class="provider-name">
+                                    <input type="radio" name="account" value="{{ base_account.id }}" id="id_account_{{ base_account.id }}" checked style="display:none;">
+                                    {{ account.get_brand.name }}: {{ account }}
+                                </span>
+                                <button type="submit" name="action_remove" class="btn-remove">Disconnect</button>
+                            </li>
+                        {% endwith %}
+                    {% endfor %}
+                </ul>
+            </form>
+        {% else %}
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+                No third-party accounts connected yet.
+            </p>
+        {% endif %}
+
+        <div class="divider">/ / ADD CONNECTION / /</div>
+
+        <div class="connect-actions">
+            <a href="{% provider_login_url 'github' process='connect' %}" class="btn-social">+ GitHub</a>
+            <a href="{% provider_login_url 'google' process='connect' %}" class="btn-social">+ Google</a>
+        </div>
+
+        <div class="auth-footer">
+            <a href="{% url 'task_board' %}">← Return to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

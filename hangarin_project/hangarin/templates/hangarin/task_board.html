@@ -318,10 +318,8 @@
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
             <span style="font-size: 0.9rem;">👤 {{ user.username }}</span>
-            <form action="{% url 'logout' %}" method="post" style="margin: 0;">
-                {% csrf_token %}
-                <button type="submit" style="background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer;">Logout</button>
-            </form>
+            <a href="{% url 'socialaccount_connections' %}" style="color: #64b5f6; font-size: 0.85rem; text-decoration: none;">Manage Connections</a>
+            <a href="{% url 'account_logout' %}" style="border: 1px solid #ff4d4d; color: #ff4d4d; padding: 0.3rem 0.7rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem;">Logout</a>
         </div>
     </header>
 
