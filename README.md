@@ -75,7 +75,7 @@ source hangarinenv/bin/activate
 Install Django, `django-allauth`, `PyJWT`, `cryptography`, and `Faker`:
 
 ```bash
-pip install django django-allauth PyJWT cryptography faker
+pip install -r requirements.txt
 
 ```
 
