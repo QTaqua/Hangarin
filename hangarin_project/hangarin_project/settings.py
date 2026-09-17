@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-9l-!xs$$9m+a8#rczcrdkjiu7=)-ib%i5*1m1z$25fbjvkt)v^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['qtaqua.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
