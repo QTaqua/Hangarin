@@ -73,7 +73,7 @@ def task_board(request):
             priority_id = request.POST.get('priority')
             category_id = request.POST.get('category')
 
-            if title and priority_id and category_id:
+            if title and priority_id and category_id and deadline_raw:
                 priority = get_object_or_404(Priority, id=priority_id)
                 category = get_object_or_404(Category, id=category_id)
                 deadline = parse_deadline(deadline_raw)
