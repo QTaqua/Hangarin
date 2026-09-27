@@ -38,7 +38,7 @@ class Task(models.Model):
         User, on_delete=models.CASCADE, related_name="tasks"
     )
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    description = models.TextField(null=True, blank=True)
     deadline = models.DateTimeField()
     status = models.CharField(
         max_length=20, default="Pending"
