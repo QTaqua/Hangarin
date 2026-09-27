@@ -1,8 +1,6 @@
-var staticCacheName = "hangarin-v1";
+var staticCacheName = "hangarin-v2";
 
-// Files to cache when installing the service worker
 var filesToCache = [
-    '/',
     '/static/js/serviceworker.js',
     '/manifest.json'
 ];
@@ -30,13 +28,15 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-    e.respondWith(
-        caches.match(e.request).then(function(response) {
-            // Return cached asset if available, otherwise attempt network fetch
-            return response || fetch(e.request).catch(function() {
-                // Returns cached root page if network fails (offline fallback)
-                return caches.match('/');
-            });
-        })
-    );
+    // Only cache GET requests that are not navigating HTML pages
+    if (e.request.method === 'GET' && e.request.mode !== 'navigate') {
+        e.respondWith(
+            caches.match(e.request).then(function(response) {
+                return response || fetch(e.request);
+            })
+        );
+    } else {
+        // Always go directly to network for HTML page navigations & POST forms
+        e.respondWith(fetch(e.request));
+    }
 });

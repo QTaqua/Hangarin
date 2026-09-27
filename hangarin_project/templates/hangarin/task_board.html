@@ -98,7 +98,7 @@
         }
 
         /* Vertical Stack Grid */
-       .board-grid {
+        .board-grid {
             display: flex;
             flex-wrap: wrap;
             gap: 1.5rem;
@@ -106,7 +106,7 @@
             align-items: flex-start;
         }
 
-       .column {
+        .column {
             background-color: var(--bg-beige);
             border-radius: 12px;
             padding: 1.25rem;
@@ -339,17 +339,17 @@
                 <div class="column">
                     <div class="column-header">
                         <h3>{{ priority.name }}</h3>
-                        <span class="task-count">{{ priority.tasks.count }}</span>
+                        <span class="task-count">{{ priority.user_tasks|length }}</span>
                     </div>
 
-                    {% for task in priority.tasks.all %}
+                    {% for task in priority.user_tasks %}
                         <div class="task-card {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-card-{{ task.id }}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                 <span class="category-tag">{{ task.category.name }}</span>
                                 
                                 <div>
                                     <!-- Toggle Task Complete -->
-                                    <form method="POST" style="display: inline;">
+                                    <form method="POST" action="{% url 'task_board' %}" style="display: inline;">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="toggle_task">
                                         <input type="hidden" name="task_id" value="{{ task.id }}">
@@ -364,7 +364,7 @@
                                     </button>
 
                                     <!-- Delete Task -->
-                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this task?');">
+                                    <form method="POST" action="{% url 'task_board' %}" style="display: inline;" onsubmit="return confirm('Delete this task?');">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="delete_task">
                                         <input type="hidden" name="task_id" value="{{ task.id }}">
@@ -412,7 +412,13 @@
                             {% endif %}
 
                             <div class="task-meta" style="margin-top: 0.8rem;">
-                                <span>📅 {{ task.deadline|date:"M d, Y" }}</span>
+                                <span>
+                                    {% if task.deadline %}
+                                        📅 {{ task.deadline|date:"M d, Y" }}
+                                    {% else %}
+                                        📅 No deadline
+                                    {% endif %}
+                                </span>
                                 
                                 <!-- Task Status Dropdown -->
                                 <select class="status-select js-task-status" data-task-id="{{ task.id }}">
@@ -427,12 +433,12 @@
                         <div id="editModal-{{ task.id }}" class="modal">
                             <div class="modal-content">
                                 <div class="modal-header">Edit Task</div>
-                                <form method="POST">
+                                <form method="POST" action="{% url 'task_board' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="edit_task">
                                     <input type="hidden" name="task_id" value="{{ task.id }}">
-                                    <input type="hidden" name="subtask_id" id="subtask_id_del_{{ task.id }}" value="">
-                                    <input type="hidden" name="note_id" id="note_id_del_{{ task.id }}" value="">
+                                    <input type="hidden" name="subtask_id_del" id="subtask_id_del_{{ task.id }}" value="">
+                                    <input type="hidden" name="note_id_del" id="note_id_del_{{ task.id }}" value="">
 
                                     <div class="form-group">
                                         <label>Task Title</label>
@@ -445,8 +451,8 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label>Deadline (Current: {{ task.deadline|date:"Y-m-d H:i" }})</label>
-                                        <input type="datetime-local" name="deadline" value="{{ task.deadline|date:'Y-m-d\TH:i' }}">
+                                        <label>Deadline (Optional)</label>
+                                        <input type="datetime-local" name="deadline" value="{% if task.deadline %}{{ task.deadline|date:'Y-m-d\TH:i' }}{% endif %}">
                                     </div>
 
                                     <div class="form-group">
@@ -474,7 +480,7 @@
                                             {% for st in task.subtasks.all %}
                                                 <div class="item-list-row">
                                                     <span>• {{ st.title }}</span>
-                                                    <button type="button" onclick="this.form.action.value='delete_subtask'; this.form.subtask_id.value='{{ st.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
+                                                    <button type="button" onclick="document.getElementById('subtask_id_del_{{ task.id }}').value='{{ st.id }}'; this.form.querySelector('input[name=action]').value='delete_subtask'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
                                                 </div>
                                             {% endfor %}
                                         </div>
@@ -491,7 +497,7 @@
                                             {% for note in task.notes.all %}
                                                 <div class="item-list-row">
                                                     <span>💬 {{ note.content }}</span>
-                                                    <button type="button" onclick="this.form.action.value='delete_note'; this.form.note_id.value='{{ note.id }}'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
+                                                    <button type="button" onclick="document.getElementById('note_id_del_{{ task.id }}').value='{{ note.id }}'; this.form.querySelector('input[name=action]').value='delete_note'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
                                                 </div>
                                             {% endfor %}
                                         </div>
@@ -521,7 +527,7 @@
     <div id="taskModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Create New Task</div>
-            <form method="POST">
+            <form method="POST" action="{% url 'task_board' %}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="create_task">
 
@@ -536,8 +542,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Deadline</label>
-                    <input type="datetime-local" name="deadline" required>
+                    <label>Deadline (Optional)</label>
+                    <input type="datetime-local" name="deadline">
                 </div>
 
                 <div class="form-group">
@@ -685,7 +691,7 @@
                     newRow.className = 'item-list-row';
                     newRow.innerHTML = `
                         <span>• ${data.title}</span>
-                        <button type="button" onclick="this.form.action.value='delete_subtask'; this.form.subtask_id.value='${data.id}'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
+                        <button type="button" onclick="document.getElementById('subtask_id_del_${taskId}').value='${data.id}'; this.form.querySelector('input[name=action]').value='delete_subtask'; this.form.submit();" class="btn-inline-del" title="Delete Subtask">✕</button>
                     `;
                     listContainer.appendChild(newRow);
                     input.value = '';
@@ -716,7 +722,7 @@
                     newRow.className = 'item-list-row';
                     newRow.innerHTML = `
                         <span>💬 ${data.content}</span>
-                        <button type="button" onclick="this.form.action.value='delete_note'; this.form.note_id.value='${data.id}'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
+                        <button type="button" onclick="document.getElementById('note_id_del_${taskId}').value='${data.id}'; this.form.querySelector('input[name=action]').value='delete_note'; this.form.submit();" class="btn-inline-del" title="Delete Note">✕</button>
                     `;
                     listContainer.appendChild(newRow);
                     input.value = '';
