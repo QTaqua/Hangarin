@@ -94,21 +94,22 @@
             background-color: #6e2124;
         }
 
-        /* Kanban Horizontal Scroll Grid */
-        .board-grid {
+        /* Vertical Stack Grid */
+       .board-grid {
             display: flex;
+            flex-wrap: wrap;
             gap: 1.5rem;
+            justify-content: center;
             align-items: flex-start;
-            min-width: max-content;
         }
 
-        .column {
+       .column {
             background-color: var(--bg-beige);
             border-radius: 12px;
             padding: 1.25rem;
             border: 1px solid var(--border-color);
             width: 300px;
-            flex-shrink: 0;
+            flex: 0 0 300px;
         }
 
         .column-header {
@@ -190,15 +191,15 @@
             border-top: 1px solid #F0F0F0;
         }
 
-        .status-pill {
+        .status-select {
+            font-size: 0.75rem;
             font-weight: 600;
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: white;
+            cursor: pointer;
         }
-
-        .status-pending { color: #D97706; }
-        .status-in-progress { color: #2563EB; }
-        .status-completed { color: #059669; }
 
         .nested-section {
             margin-top: 0.8rem;
@@ -312,7 +313,7 @@
 </head>
 <body>
 
-    <header style="display: flex; justify-content: space-between; align-items: center;">
+    <header>
         <div>
             <h1>HANGARIN <span class="kanji-sub">タスク管理</span></h1>
         </div>
@@ -339,7 +340,7 @@
                     </div>
 
                     {% for task in priority.tasks.all %}
-                        <div class="task-card {% if task.status == 'Completed' %}is-completed{% endif %}">
+                        <div class="task-card {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-card-{{ task.id }}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                 <span class="category-tag">{{ task.category.name }}</span>
                                 
@@ -371,7 +372,7 @@
                                 </div>
                             </div>
 
-                            <div class="task-title {% if task.status == 'Completed' %}completed-text{% endif %}">
+                            <div class="task-title {% if task.status == 'Completed' %}completed-text{% endif %}" id="task-title-{{ task.id }}">
                                 {{ task.title }}
                             </div>
                             <div class="task-desc">{{ task.description }}</div>
@@ -382,17 +383,14 @@
                                     <ul>
                                         {% for subtask in task.subtasks.all %}
                                             <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                                <span class="{% if subtask.status == 'Completed' %}completed-text{% endif %}">
+                                                <span id="subtask-text-{{ subtask.id }}" class="{% if subtask.status == 'Completed' %}completed-text{% endif %}">
                                                     • {{ subtask.title }}
                                                 </span>
-                                                <form method="POST" style="display: inline;">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="action" value="toggle_subtask">
-                                                    <input type="hidden" name="subtask_id" value="{{ subtask.id }}">
-                                                    <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 0.85rem;">
-                                                        {% if subtask.status == 'Completed' %}☑️{% else %}☐{% endif %}
-                                                    </button>
-                                                </form>
+                                                <input type="checkbox" 
+                                                       class="js-subtask-toggle" 
+                                                       data-subtask-id="{{ subtask.id }}" 
+                                                       data-task-id="{{ task.id }}" 
+                                                       {% if subtask.status == 'Completed' %}checked{% endif %}>
                                             </li>
                                         {% endfor %}
                                     </ul>
@@ -412,11 +410,17 @@
 
                             <div class="task-meta" style="margin-top: 0.8rem;">
                                 <span>📅 {{ task.deadline|date:"M d, Y" }}</span>
-                                <span class="status-pill status-{{ task.status|slugify }}">{{ task.status }}</span>
+                                
+                                <!-- Task Status Dropdown -->
+                                <select class="status-select js-task-status" data-task-id="{{ task.id }}">
+                                    <option value="Pending" {% if task.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                    <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+                                </select>
                             </div>
                         </div>
 
-                        <!-- Edit Task Modal for this specific task -->
+                        <!-- Edit Task Modal -->
                         <div id="editModal-{{ task.id }}" class="modal">
                             <div class="modal-content">
                                 <div class="modal-header">Edit Task</div>
@@ -460,7 +464,7 @@
                                         </select>
                                     </div>
 
-                                    <!-- Subtask Section (AJAX Enabled) -->
+                                    <!-- Subtask Section -->
                                     <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
                                         <label style="color: var(--primary-red);">Subtasks</label>
                                         <div id="subtask-list-{{ task.id }}">
@@ -477,7 +481,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Notes Section (AJAX Enabled) -->
+                                    <!-- Notes Section -->
                                     <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
                                         <label style="color: var(--primary-red);">Notes</label>
                                         <div id="note-list-{{ task.id }}">
@@ -583,6 +587,78 @@
             return cookieValue;
         }
 
+        /* Update Task Status via AJAX */
+        function updateTaskStatusAjax(taskId, newStatus) {
+            const formData = new FormData();
+            formData.append('action', 'update_status');
+            formData.append('task_id', taskId);
+            formData.append('status', newStatus);
+
+            fetch('', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: formData
+            }).then(() => {
+                const card = document.getElementById(`task-card-${taskId}`);
+                const title = document.getElementById(`task-title-${taskId}`);
+                if (newStatus === 'Completed') {
+                    card.classList.add('is-completed');
+                    title.classList.add('completed-text');
+                } else {
+                    card.classList.remove('is-completed');
+                    title.classList.remove('completed-text');
+                }
+            });
+        }
+
+        /* Dropdown change listener */
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('js-task-status')) {
+                const taskId = e.target.getAttribute('data-task-id');
+                const newStatus = e.target.value;
+                updateTaskStatusAjax(taskId, newStatus);
+            }
+        });
+
+        /* Subtask Checkbox Listener (Triggers AJAX for Subtask + Auto 'In Progress') */
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('js-subtask-toggle')) {
+                const subtaskId = e.target.getAttribute('data-subtask-id');
+                const taskId = e.target.getAttribute('data-task-id');
+                const isChecked = e.target.checked;
+
+                // Toggle subtask text strike-through dynamically
+                const subtaskSpan = document.getElementById(`subtask-text-${subtaskId}`);
+                if (subtaskSpan) {
+                    if (isChecked) {
+                        subtaskSpan.classList.add('completed-text');
+                    } else {
+                        subtaskSpan.classList.remove('completed-text');
+                    }
+                }
+
+                // POST subtask action via AJAX
+                const formData = new FormData();
+                formData.append('action', 'toggle_subtask');
+                formData.append('subtask_id', subtaskId);
+
+                fetch('', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
+                });
+
+                // Auto set parent task status dropdown to "In Progress" if checked
+                if (isChecked) {
+                    const statusSelect = document.querySelector(`.js-task-status[data-task-id="${taskId}"]`);
+                    if (statusSelect && statusSelect.value !== 'Completed') {
+                        statusSelect.value = 'In Progress';
+                        updateTaskStatusAjax(taskId, 'In Progress');
+                    }
+                }
+            }
+        });
+
         function addSubtaskAjax(taskId) {
             const input = document.getElementById(`new-subtask-input-${taskId}`);
             const title = input.value.trim();
@@ -644,6 +720,7 @@
                 }
             });
         }
+
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('js-subtask-btn')) {
                 const taskId = e.target.getAttribute('data-task-id');

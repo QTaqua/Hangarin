@@ -26,8 +26,18 @@ def task_board(request):
     if request.method == "POST":
         action = request.POST.get('action')
 
+        # 1. NEW: Handle direct status update via dropdown select (AJAX)
+        if action == 'update_status':
+            task_id = request.POST.get('task_id')
+            new_status = request.POST.get('status')
+            task = get_object_or_404(Task, id=task_id, user=request.user)
+            if new_status in ['Pending', 'In Progress', 'Completed']:
+                task.status = new_status
+                task.save()
+            return JsonResponse({'status': 'success', 'new_status': task.status})
+
         # AJAX: Add Subtask
-        if action == 'ajax_add_subtask':
+        elif action == 'ajax_add_subtask':
             task_id = request.POST.get('task_id')
             title = request.POST.get('title', '').strip()
             task = get_object_or_404(Task, id=task_id, user=request.user)
@@ -94,12 +104,27 @@ def task_board(request):
                 task.status = 'Pending'
                 task.save()
 
-        # Form Submit: Toggle Subtask Status
+        # 2. UPDATED: Toggle Subtask Status & Auto-Set Parent Task to 'In Progress'
         elif action == 'toggle_subtask':
             subtask_id = request.POST.get('subtask_id')
             subtask = get_object_or_404(SubTask, id=subtask_id, parent_task__user=request.user)
-            subtask.status = 'Pending' if subtask.status == 'Completed' else 'Completed'
+            
+            # Toggle subtask status
+            if subtask.status == 'Completed':
+                subtask.status = 'Pending'
+            else:
+                subtask.status = 'Completed'
+                # If checking subtask, auto set parent task to "In Progress" if not completed
+                if subtask.parent_task.status != 'Completed':
+                    subtask.parent_task.status = 'In Progress'
+                    subtask.parent_task.save()
+
             subtask.save()
+            return JsonResponse({
+                'status': 'success',
+                'subtask_status': subtask.status,
+                'task_status': subtask.parent_task.status
+            })
 
         # Form Submit: Delete Subtask
         elif action == 'delete_subtask':
